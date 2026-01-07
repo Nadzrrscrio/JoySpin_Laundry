@@ -1,35 +1,40 @@
-import 'package:flutter/material.dart'; 
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../services/supabase_service.dart';
 import '../models/order_model.dart';
-import '../app_theme.dart'; 
+import '../app_theme.dart';
 
 class OrderController extends GetxController {
   final SupabaseService _supabase = SupabaseService();
-  
-  // --- STATE VARIABLES ---
-  var selectedCategory = ''.obs; 
-  var selectedService = ''.obs;  
+
+  var selectedCategory = ''.obs;
+  var selectedService = ''.obs;
   var selectedPickup = ''.obs;
-  var quantity = 1.obs;          
-  var unitPrice = 0.0.obs;       
+  var quantity = 1.obs;
+  var unitPrice = 0.0.obs;
   var isLoading = false.obs;
   var pickupAddress = ''.obs;
-
-  // --- DATA DINAMIS DARI DATABASE ---
-  // Menyimpan semua raw data dari tabel 'services'
   var allServices = <Map<String, dynamic>>[].obs;
+  var searchText = ''.obs;
 
   // Mendapatkan kategori unik untuk Tampilan Home (Agar icon muncul otomatis)
   List<String> get uniqueCategories {
     if (allServices.isEmpty) return [];
-    
+
     // 1. Ambil kategori unik
-    List<String> cats = allServices.map((e) => e['category'] as String).toSet().toList();
-    
+    List<String> cats = allServices
+        .map((e) => e['category'] as String)
+        .toSet()
+        .toList();
+
     // 2. Sorting agar urutan rapi (Prioritas: Kering, Setrika, Satuan, Sepatu, ...Lainnya)
-    final priority = ['Cuci Kering', 'Cuci Setrika', 'Cuci Satuan', 'Cuci Sepatu'];
-    
+    final priority = [
+      'Cuci Kering',
+      'Cuci Setrika',
+      'Cuci Satuan',
+      'Cuci Sepatu',
+    ];
+
     cats.sort((a, b) {
       int indexA = priority.indexOf(a);
       int indexB = priority.indexOf(b);
@@ -38,13 +43,24 @@ class OrderController extends GetxController {
       if (indexB != -1) return 1;
       return a.compareTo(b);
     });
-    
+
     return cats;
   }
 
-  // Filter layanan berdasarkan kategori yang sedang dipilih user
   List<Map<String, dynamic>> get currentServices {
-    return allServices.where((item) => item['category'] == selectedCategory.value).toList();
+    var list = allServices
+        .where((item) => item['category'] == selectedCategory.value)
+        .toList();
+    if (searchText.value.isNotEmpty) {
+      list = list
+          .where(
+            (item) => item['name'].toString().toLowerCase().contains(
+              searchText.value.toLowerCase(),
+            ),
+          )
+          .toList();
+    }
+    return list;
   }
 
   @override
@@ -65,8 +81,9 @@ class OrderController extends GetxController {
   }
 
   // --- LOGIC UI HELPERS ---
-  bool get isSelfService => selectedCategory.value.toLowerCase().contains('kering');
-  
+  bool get isSelfService =>
+      selectedCategory.value.toLowerCase().contains('kering');
+
   String get quantityUnit {
     String cat = selectedCategory.value.toLowerCase();
     if (cat.contains('setrika')) return 'Kg';
@@ -79,15 +96,15 @@ class OrderController extends GetxController {
   // --- LOGIC ORDER ---
   void startNewOrder(String category) {
     selectedCategory.value = category;
+    searchText.value = '';
     selectedService.value = '';
-    pickupAddress.value = ''; 
-    selectedPickup.value = isSelfService ? 'Datang ke Outlet' : ''; 
+    pickupAddress.value = '';
+    selectedPickup.value = isSelfService ? 'Datang ke Outlet' : '';
     quantity.value = 1;
     unitPrice.value = 0.0;
-    
-    // Refresh data biar harga update real-time
-    fetchServices(); 
 
+    // Refresh data biar harga update real-time
+    fetchServices();
     Get.toNamed('/service-selection');
   }
 
@@ -110,8 +127,8 @@ class OrderController extends GetxController {
     }
 
     if (!isSelfService && selectedPickup.value.isEmpty) {
-       Get.snackbar("Peringatan", "Mohon pilih metode pengambilan");
-       return;
+      Get.snackbar("Peringatan", "Mohon pilih metode pengambilan");
+      return;
     }
 
     if (selectedPickup.value == 'Dijemput' && pickupAddress.value.isEmpty) {
@@ -121,9 +138,12 @@ class OrderController extends GetxController {
 
     try {
       isLoading.value = true;
-      String finalPickup = isSelfService ? 'Self Service (Outlet)' : selectedPickup.value;
-      
-      String detailService = "${selectedService.value} (${quantity.value} $quantityUnit)";
+      String finalPickup = isSelfService
+          ? 'Self Service (Outlet)'
+          : selectedPickup.value;
+
+      String detailService =
+          "${selectedService.value} (${quantity.value} $quantityUnit)";
       if (finalPickup == 'Dijemput') {
         detailService += "\n[Lokasi: ${pickupAddress.value}]";
       }
@@ -139,14 +159,16 @@ class OrderController extends GetxController {
       await _supabase.createOrder(order.toJson());
 
       Get.offAllNamed('/dashboard');
-      Get.snackbar("Berhasil", "Cucian dibuat! Total: Rp ${totalPrice.toStringAsFixed(0)}",
-        backgroundColor: const Color(0xFF333333), 
-        colorText: Colors.white,                  
-        icon: const Icon(Icons.check_circle, color: Colors.greenAccent), 
-        snackPosition: SnackPosition.TOP,      
-        margin: const EdgeInsets.all(16),         
-        borderRadius: 10,                         
-        duration: const Duration(seconds: 4),     
+      Get.snackbar(
+        "Berhasil",
+        "Cucian dibuat! Total: Rp ${totalPrice.toStringAsFixed(0)}",
+        backgroundColor: const Color(0xFF333333),
+        colorText: Colors.white,
+        icon: const Icon(Icons.check_circle, color: Colors.greenAccent),
+        snackPosition: SnackPosition.TOP,
+        margin: const EdgeInsets.all(16),
+        borderRadius: 10,
+        duration: const Duration(seconds: 4),
         isDismissible: true,
       );
     } catch (e) {

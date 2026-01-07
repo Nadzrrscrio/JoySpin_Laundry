@@ -17,50 +17,93 @@ class ServiceSelectionView extends GetView<OrderController> {
       appBar: AppBar(title: Text("Pilih Layanan ${controller.selectedCategory.value}")),
       body: Column(
         children: [
+          Container(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+            color: AppTheme.backgroundColor,
+            child: TextField(
+              onChanged: (val) => controller.searchText.value = val, // Trigger Dynamic Search
+              decoration: InputDecoration(
+                hintText: "Cari layanan (misal: Jas, Selimut)...",
+                prefixIcon: const Icon(Icons.search),
+                fillColor: Colors.white,
+                filled: true,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none
+                ),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              ),
+            ),
+          ),
+          
           // 1. LIST ITEM LAYANAN
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: controller.currentServices.length,
-              itemBuilder: (ctx, i) {
-                final item = controller.currentServices[i];
-                return Obx(() {
-                  final isSelected = controller.selectedService.value == item['name'];
-                  return Card(
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      side: BorderSide(
-                        color: isSelected ? AppTheme.secondaryColor : Colors.transparent,
-                        width: 2
-                      )
-                    ),
-                    color: context.theme.cardColor,
-                    margin: const EdgeInsets.only(bottom: 12),
-                    child: ListTile(
-                      title: Text(item['name'], style: const TextStyle(fontWeight: FontWeight.w600)),
-                      subtitle: controller.selectedCategory.value == 'Cuci Setrika' 
-                          ? const Text("Min. 1 Kg") 
-                          : null,
-                      trailing: Text(
-                        currencyFormat.format(item['price']),
-                        style: TextStyle(
-                          color: isSelected ? AppTheme.secondaryColor : Colors.grey,
-                          fontWeight: FontWeight.bold
+            child: Obx(() {
+              // 1. Cek jika hasil pencarian kosong (Fitur Search Results Feedback)
+              if (controller.currentServices.isEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.search_off, size: 60, color: Colors.grey.shade300),
+                      const SizedBox(height: 10),
+                      Text(
+                        "Layanan tidak ditemukan",
+                        style: TextStyle(color: Colors.grey.shade600),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              // 2. Tampilkan List jika data ada
+              return ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: controller.currentServices.length,
+                itemBuilder: (ctx, i) {
+                  final item = controller.currentServices[i];
+                  
+                  // Obx inner tetap dibutuhkan untuk update visual seleksi (border warna)
+                  return Obx(() {
+                    final isSelected = controller.selectedService.value == item['name'];
+                    return Card(
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: BorderSide(
+                          color: isSelected ? AppTheme.secondaryColor : Colors.transparent,
+                          width: 2
+                        )
+                      ),
+                      color: context.theme.cardColor,
+                      margin: const EdgeInsets.only(bottom: 12),
+                      child: ListTile(
+                        title: Text(item['name'], style: const TextStyle(fontWeight: FontWeight.w600)),
+                        subtitle: controller.selectedCategory.value == 'Cuci Setrika' 
+                            ? const Text("Min. 1 Kg") 
+                            : null,
+                        trailing: Text(
+                          currencyFormat.format(item['price']),
+                          style: TextStyle(
+                            color: isSelected ? AppTheme.secondaryColor : Colors.grey,
+                            fontWeight: FontWeight.bold
+                          ),
                         ),
+                        leading: Icon(
+                          isSelected ? Icons.check_circle : Icons.radio_button_unchecked,
+                          color: isSelected ? AppTheme.secondaryColor : Colors.grey,
+                        ),
+                        onTap: () {
+                          controller.setService(item['name'], item['price']);
+                          // Tutup keyboard saat user memilih item (UX Enhancement)
+                          FocusScope.of(context).unfocus();
+                        },
                       ),
-                      leading: Icon(
-                        isSelected ? Icons.check_circle : Icons.radio_button_unchecked,
-                        color: isSelected ? AppTheme.secondaryColor : Colors.grey,
-                      ),
-                      onTap: () {
-                        controller.setService(item['name'], item['price']);
-                      },
-                    ),
-                  );
-                });
-              },
-            ),
+                    );
+                  });
+                },
+              );
+            }),
           ),
 
           // 2. BAGIAN INPUT JUMLAH & PICKUP
