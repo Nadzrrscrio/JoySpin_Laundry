@@ -3,7 +3,7 @@ import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import '../../controllers/order_controller.dart';
 import '../../app_theme.dart';
-import '../map/address_map_view.dart'; // Import halaman map
+import '../map/address_map_view.dart'; 
 
 class ServiceSelectionView extends GetView<OrderController> {
   const ServiceSelectionView({super.key});
@@ -14,25 +14,46 @@ class ServiceSelectionView extends GetView<OrderController> {
 
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
-      appBar: AppBar(title: Text("Pilih Layanan ${controller.selectedCategory.value}")),
+      appBar: AppBar(title: Obx(() => Text("Pilih ${controller.selectedCategory.value}"))),
       body: Column(
         children: [
+          // BAGIAN ATAS: SEARCH & SORT BUTTON
           Container(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
             color: AppTheme.backgroundColor,
-            child: TextField(
-              onChanged: (val) => controller.searchText.value = val, // Trigger Dynamic Search
-              decoration: InputDecoration(
-                hintText: "Cari layanan (misal: Jas, Selimut)...",
-                prefixIcon: const Icon(Icons.search),
-                fillColor: Colors.white,
-                filled: true,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none
+            child: Row(
+              children: [
+                // 1. Search Bar (Expanded agar memenuhi ruang)
+                Expanded(
+                  child: TextField(
+                    onChanged: (val) => controller.searchText.value = val, // Trigger Dynamic Search
+                    decoration: InputDecoration(
+                      hintText: "Cari layanan...",
+                      prefixIcon: const Icon(Icons.search),
+                      fillColor: Colors.white,
+                      filled: true,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    ),
+                  ),
                 ),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              ),
+                const SizedBox(width: 10),
+                
+                // 2. SORT BUTTON (Sort Overlay Trigger)
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white, 
+                    borderRadius: BorderRadius.circular(12)
+                  ),
+                  child: IconButton(
+                    icon: const Icon(Icons.sort, color: AppTheme.secondaryColor),
+                    onPressed: () => _showSortBottomSheet(context),
+                  ),
+                )
+              ],
             ),
           ),
           
@@ -303,5 +324,45 @@ class ServiceSelectionView extends GetView<OrderController> {
         ),
       )),
     );
+  }
+
+  // --- UI SORT OVERLAY (Bottom Sheet) ---
+  void _showSortBottomSheet(BuildContext context) {
+    Get.bottomSheet(
+      Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: context.theme.cardColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text("Urutkan Layanan", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 15),
+            _sortOptionItem(context, "Default", "default", Icons.list),
+            _sortOptionItem(context, "Harga Terendah", "lowest_price", Icons.arrow_downward),
+            _sortOptionItem(context, "Harga Tertinggi", "highest_price", Icons.arrow_upward),
+            _sortOptionItem(context, "Nama (A-Z)", "name_az", Icons.sort_by_alpha),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _sortOptionItem(BuildContext context, String title, String value, IconData icon) {
+    return Obx(() {
+      final isSelected = controller.sortOption.value == value;
+      return ListTile(
+        leading: Icon(icon, color: isSelected ? AppTheme.secondaryColor : Colors.grey),
+        title: Text(title, style: TextStyle(color: isSelected ? AppTheme.secondaryColor : context.textTheme.bodyLarge?.color, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
+        trailing: isSelected ? const Icon(Icons.check, color: AppTheme.secondaryColor) : null,
+        onTap: () {
+          controller.sortOption.value = value;
+          Get.back(); // Tutup overlay setelah memilih
+        },
+      );
+    });
   }
 }

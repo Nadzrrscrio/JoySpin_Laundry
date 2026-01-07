@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../services/supabase_service.dart';
 import '../models/order_model.dart';
-import '../app_theme.dart';
 
 class OrderController extends GetxController {
   final SupabaseService _supabase = SupabaseService();
@@ -16,6 +15,7 @@ class OrderController extends GetxController {
   var pickupAddress = ''.obs;
   var allServices = <Map<String, dynamic>>[].obs;
   var searchText = ''.obs;
+  var sortOption = 'default'.obs;
 
   // Mendapatkan kategori unik untuk Tampilan Home (Agar icon muncul otomatis)
   List<String> get uniqueCategories {
@@ -60,6 +60,22 @@ class OrderController extends GetxController {
           )
           .toList();
     }
+    switch (sortOption.value) {
+      case 'lowest_price':
+        list.sort((a, b) => (a['price'] as int).compareTo(b['price'] as int));
+        break;
+      case 'highest_price':
+        list.sort((a, b) => (b['price'] as int).compareTo(a['price'] as int));
+        break;
+      case 'name_az':
+        list.sort(
+          (a, b) => (a['name'] as String).compareTo(b['name'] as String),
+        );
+        break;
+      default:
+        list.sort((a, b) => (a['id'] as int).compareTo(b['id'] as int));
+    }
+
     return list;
   }
 
@@ -97,6 +113,7 @@ class OrderController extends GetxController {
   void startNewOrder(String category) {
     selectedCategory.value = category;
     searchText.value = '';
+    sortOption.value = 'default';
     selectedService.value = '';
     pickupAddress.value = '';
     selectedPickup.value = isSelfService ? 'Datang ke Outlet' : '';
